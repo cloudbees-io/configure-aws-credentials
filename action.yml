@@ -1,0 +1,101 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: action
+name: 'Configure AWS Credentials For CloudBees Automations'
+description: 'Configure AWS credential and region environment variables for use with the AWS CLI and AWS SDKs'
+inputs:
+#  audience:
+#    default: 'sts.amazonaws.com'
+#    description: 'The audience to use for the OIDC provider'
+#    required: false
+  aws-access-key-id:
+    description: >-
+      AWS Access Key ID. This input is required if running in the GitHub hosted environment.
+      It is optional if running in a self-hosted environment that already has AWS credentials,
+      for example on an EC2 instance.
+    required: false
+  aws-secret-access-key:
+    description: >-
+      AWS Secret Access Key. This input is required if running in the GitHub hosted environment.
+      It is optional if running in a self-hosted environment that already has AWS credentials,
+      for example on an EC2 instance.
+    required: false
+  aws-session-token:
+    description: 'AWS Session Token'
+    required: false
+  aws-region:
+    description: 'AWS Region, e.g. us-east-2'
+    required: true
+  mask-aws-account-id:
+    description: >-
+      Whether to set the AWS account ID for these credentials as a secret value,
+      so that it is masked in logs. Valid values are 'true' and 'false'.
+      Defaults to true
+    required: false
+    default: "true"
+  role-to-assume:
+    description: >-
+      Use the provided credentials to assume an IAM role and configure the Actions
+      environment with the assumed role credentials rather than with the provided
+      credentials
+    required: false
+#  web-identity-token-file:
+#    description: >-
+#      Use the web identity token file from the provided file system path in order to
+#      assume an IAM role using a web identity. E.g., from within an Amazon EKS worker node
+#    required: false
+  role-duration-seconds:
+    description: "Role duration in seconds (default: 6 hours, 1 hour for OIDC/specified aws-session-token)"
+    required: false
+  role-session-name:
+    description: 'Role session name (default: CloudBeesAutomations)'
+    required: false
+  role-external-id:
+    description: 'The external ID of the role to assume'
+    required: false
+  role-skip-session-tagging:
+    description: 'Skip session tagging during role assumption'
+    required: false
+    default: "false"
+  http-proxy:
+    description: 'Proxy to use for the AWS SDK agent'
+    required: false
+  role-chaining:
+    description: 'Use existing credentials from the environment to assume a new role'
+    required: false
+    default: "false"
+  inline-session-policy:
+    description: 'Inline session policy'
+    required: false
+  managed-session-policies:
+    description: 'List of managed session policies'
+    required: false
+outputs:
+  aws-account-id:
+    value: ${{ steps.auth.outputs.aws-account-id }}
+    description: 'The AWS account ID for the provided credentials'
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS Credentials For CloudBees Automations
+      id: auth
+      uses: docker://registry.saas-dev.beescloud.com/staging/configure-aws-credentials:v0.0.5
+      env:
+        #INPUT_AUDIENCE: ${{ inputs.audience }}
+        INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws-session-token }}
+        INPUT_AWS_REGION: ${{ inputs.aws-region }}
+        INPUT_MASK_AWS_ACCOUNT_ID: ${{ inputs.mask-aws-account-id }}
+        INPUT_ROLE_TO_ASSUME: ${{ inputs.role-to-assume }}
+        #INPUT_WEB_IDENTITY_TOKEN_FILE: ${{ inputs.web-identity-token-file }}
+        INPUT_ROLE_DURATION_SECONDS: ${{ inputs.role-duration-seconds }}
+        INPUT_ROLE_SESSION_NAME: ${{ inputs.role-session-name }}
+        INPUT_ROLE_EXTERNAL_ID: ${{ inputs.role-external-id }}
+        INPUT_ROLE_SKIP_SESSION_TAGGING: ${{ inputs.role-skip-session-tagging }}
+        INPUT_HTTP_PROXY: ${{ inputs.http-proxy }}
+        INPUT_ROLE_CHAINING: ${{ inputs.role-chaining }}
+        INPUT_INLINE_SESSION_POLICY: ${{ inputs.inline-session-policy }}
+        INPUT_MANAGED_SESSION_POLICIES: ${{ inputs.managed-session-policies }}
+      with:
+        entrypoint: configure-aws-credentials
+        args: "" # SDP-6025

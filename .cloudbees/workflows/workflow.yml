@@ -1,0 +1,59 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+
+name: SelfTest
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  compat-check:
+    #name: Check the action running on CBA
+    steps:
+      - name: Checkout
+        uses: cloudbees-io/checkout@v1
+      - name: Compat aws
+        id: login
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ vars.cloudbees_saas_test_access_key_id }}
+          aws-secret-access-key: ${{ secrets.cloudbees_saas_test_secret_access_key }}
+          role-to-assume: service-role
+          role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
+      - name: Check Output
+        uses: docker://amazon/aws-cli:2.12.6
+        run: |
+          echo "AWS Account ID: ${{ steps.login.outputs.aws-account-id }}"
+          echo "AWS Config Dir:"
+          ls -l $HOME/.aws
+      - name: Check auth
+        uses: docker://amazon/aws-cli:2.12.6
+        run: |
+          aws sts get-caller-identity
+  alt-check:
+    #name: Check the action running on CBA
+    env:
+      RUNNER_DEBUG: "1"
+    steps:
+      - name: Checkout
+        uses: cloudbees-io/checkout@v1
+      - name: Setup
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ vars.cloudbees_saas_test_access_key_id }}
+          aws-secret-access-key: ${{ secrets.cloudbees_saas_test_secret_access_key }}
+      - name: Chain
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-region: us-east-1
+          role-chaining: "true"
+          role-to-assume: service-role
+          role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
+      - name: Check auth
+        uses: docker://amazon/aws-cli:2.12.6
+        run: |
+          aws sts get-caller-identity

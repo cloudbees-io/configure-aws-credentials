@@ -1,0 +1,198 @@
+= CloudBees action: Configure AWS credentials
+
+Configure Amazon Web Services (AWS) Identity and Access Management (IAM) credentials, credential files, and a region for use in CloudBees workflows.
+This action implements the AWS SDK credential resolution chain and sets configuration and credential files for other CloudBees actions to use.
+Configuration and credential files are detected by both the AWS SDKs and the AWS CLI for AWS API calls.
+
+== Inputs
+
+[cols="2a,1a,1a,3a",options="header"]
+.Input details
+|===
+
+| Input name
+| Data type
+| Required?
+| Description
+
+| `aws-access-key-id`
+| String
+| Yes
+| The AWS access key ID.
+
+| `aws-secret-access-key`
+| String
+| Yes
+| The AWS secret key.
+
+| `aws-region`
+| String
+| Yes
+| The AWS region.
+
+| `role-to-assume`
+| String
+| No
+| The AWS role to assume.
+
+| `role-external-id`
+| String
+| No
+| The AWS role external ID.
+
+| `role-duration-seconds`
+| String
+| No
+| The AWS role duration, in seconds.
+
+| `role-session-name`
+| String
+| No
+| The AWS role session name.
+
+| `role-chaining`
+| Boolean
+| No
+| Whether there is chaining of the AWS roles.
+Default value is `false`, specifying no chaining.
+
+| `inline-session-policy`
+| JSON
+| No
+| The AWS inline role session policy.
+
+| `managed-session-policy`
+| String
+| No
+| The AWS managed role session policy.
+
+|===
+
+== Usage examples
+
+Two methods for fetching credentials from AWS are supported: AssumeRole and authenticate as user.
+
+=== AssumeRole with static IAM credentials in secrets
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+          role-duration-seconds: 1200
+          role-session-name: MySessionName
+----
+
+=== Authenticate as a user with static IAM credentials in secrets
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+----
+
+=== AssumeRole using previous credentials
+
+This is effectively the same as the <<AssumeRole with static IAM credentials in secrets>> method above, but allows for more complex use cases that require switching roles.
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+    # ...
+
+      - name: Configure other AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::987654321000:role/my-second-role
+          role-session-name: MySessionName
+          role-chaining: true
+----
+
+=== Inline session policy
+
+You can use an IAM policy in stringified JSON format as an inline session policy.
+Code the JSON as either a single line, or formatted.
+
+Single-line JSON:
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+           inline-session-policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Allow","Action":"s3:List*","Resource":"*"}]}'
+----
+
+Formatted JSON:
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+           inline-session-policy: >-
+            {
+             "Version": "2012-10-17",
+             "Statement": [
+              {
+               "Sid":"Stmt1",
+               "Effect":"Allow",
+               "Action":"s3:List*",
+               "Resource":"*"
+              }
+             ]
+            }
+----
+
+=== Managed session policies
+
+You can use Amazon Resource Names (ARNs) of the IAM managed policies as managed session policies.
+The policies must exist in the same account as the role.
+
+Pass a single managed policy as:
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+          managed-session-policies: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+----
+
+Pass multiple managed policies as:
+
+[source,yaml]
+----
+      - name: Configure AWS credentials
+        uses: cloudbees-io/configure-aws-credentials@v0
+        with:
+           managed-session-policies: |
+            arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+            arn:aws:iam::aws:policy/AmazonS3OutpostsReadOnlyAccess
+----
+
+== License
+
+This code is made available under the 
+link:https://opensource.org/license/mit/[MIT license].
+
+== References
+
+* Learn more about link:https://docs.cloudbees.com/docs/cloudbees-saas-platform-actions/latest/[using actions in CloudBees workflows].
+* Learn about link:https://docs.cloudbees.com/docs/cloudbees-saas-platform/latest/[the CloudBees platform].
