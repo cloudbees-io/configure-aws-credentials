@@ -78,7 +78,7 @@ runs:
   steps:
     - name: Configure AWS Credentials For CloudBees Automations
       id: auth
-      uses: docker://registry.saas-dev.beescloud.com/staging/configure-aws-credentials:v0.0.4
+      uses: docker://public.ecr.aws/l7o7z1g8/actions/configure-aws-credentials:v0.0.4
       env:
         #INPUT_AUDIENCE: ${{ inputs.audience }}
         INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
