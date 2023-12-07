@@ -77,7 +77,7 @@ Two methods for fetching credentials from AWS are supported: AssumeRole and auth
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -93,7 +93,7 @@ Two methods for fetching credentials from AWS are supported: AssumeRole and auth
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -107,7 +107,7 @@ This is effectively the same as the <<AssumeRole with static IAM credentials in 
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -116,7 +116,7 @@ This is effectively the same as the <<AssumeRole with static IAM credentials in 
     # ...
 
       - name: Configure other AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
           aws-region: us-east-2
           role-to-assume: arn:aws:iam::987654321000:role/my-second-role
@@ -134,7 +134,7 @@ Single-line JSON:
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
            inline-session-policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Allow","Action":"s3:List*","Resource":"*"}]}'
 ----
@@ -144,7 +144,7 @@ Formatted JSON:
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
            inline-session-policy: >-
             {
@@ -170,7 +170,7 @@ Pass a single managed policy as:
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
           managed-session-policies: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
 ----
@@ -180,7 +180,7 @@ Pass multiple managed policies as:
 [source,yaml]
 ----
       - name: Configure AWS credentials
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: cloudbees-io/configure-aws-credentials@v1
         with:
            managed-session-policies: |
             arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
