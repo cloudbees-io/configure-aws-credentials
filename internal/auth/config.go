@@ -3,7 +3,12 @@ package auth
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,6 +45,10 @@ var credentialsFileTemplate string
 type Config struct {
 	// Audience The audience to use for the OIDC provider
 	Audience string
+	// CloudBeesApiToken The API token to use to request an OIDC ID token with
+	CloudBeesApiToken string `mapstructure:"cloudbees-api-token"`
+	// CloudBeesApiURL The API endpoint request an OIDC ID token from
+	CloudBeesApiURL string `mapstructure:"cloudbees-api-url"`
 	// AccessKeyID AWS Access Key ID
 	AccessKeyID string `mapstructure:"aws-access-key-id"`
 	// SecretAccessKey AWS Secret Access Key
@@ -189,9 +198,95 @@ func (c *Config) Authenticate(ctx context.Context) error {
 			}
 		}
 
-		if c.WebIdentityTokenFile != "" {
-			// TODO
+		if c.AccessKeyID == "" && !c.RoleChaining {
+			params := sts.AssumeRoleWithWebIdentityInput{
+				RoleArn:         req.RoleArn,
+				RoleSessionName: req.RoleSessionName,
+				DurationSeconds: req.DurationSeconds,
+				Policy:          req.Policy,
+				PolicyArns:      req.PolicyArns,
+			}
+
+			if c.WebIdentityTokenFile == "" {
+				if c.CloudBeesApiURL == "" {
+					return errors.New("could not fetch OIDC token: cloudbees-api-url not provided")
+				}
+
+				// OIDC
+				var reqURL string
+				if reqURL, err = url.JoinPath(c.CloudBeesApiURL, "/token-exchange/oidc-id-token/audience/", c.Audience); err != nil {
+					return err
+				}
+
+				client := &http.Client{}
+
+				var apiReq *http.Request
+				if apiReq, err = http.NewRequest("POST", reqURL, nil); err != nil {
+					return err
+				}
+
+				apiReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.CloudBeesApiToken))
+				apiReq.Header.Set("Content-Type", "application/json")
+				apiReq.Header.Set("Accept", "application/json")
+
+				var res *http.Response
+				if res, err = client.Do(apiReq); err != nil {
+					return err
+				}
+
+				defer func() { _ = res.Body.Close() }()
+
+				var bodyBytes []byte
+				if bodyBytes, err = io.ReadAll(res.Body); err != nil {
+					return err
+				}
+
+				if res.StatusCode != 200 {
+					return fmt.Errorf("could not fetch OIDC token: \nPOST %s\nHTTP/%d %s\n%s", reqURL, res.StatusCode, res.Status, string(bodyBytes))
+				}
+
+				var body struct {
+					IdToken string `json:"idToken"`
+				}
+
+				if err = json.Unmarshal(bodyBytes, &body); err != nil {
+					return err
+				}
+
+				if body.IdToken == "" {
+					debug := make(map[string]interface{})
+					_ = json.Unmarshal(bodyBytes, &debug)
+					var keys []string
+					for k := range debug {
+						keys = append(keys, k)
+					}
+					return fmt.Errorf("response did not include expected key `idToken`, response keys: %s", strings.Join(keys, ", "))
+				}
+
+				params.WebIdentityToken = &body.IdToken
+
+				core.Info("ℹ️Assuming role with OIDC...")
+			} else {
+				if token, err := os.ReadFile(c.WebIdentityTokenFile); err != nil {
+					return fmt.Errorf("could not read web identity token file `%s`: %w", c.WebIdentityTokenFile, err)
+				} else {
+					s := string(token)
+					params.WebIdentityToken = &s
+				}
+
+				core.Info("ℹ️Assuming role with web identity token file...")
+			}
+
+			if rsp, err := client.AssumeRoleWithWebIdentity(ctx, &params); err != nil {
+				return err
+			} else {
+				c.AccessKeyID = *rsp.Credentials.AccessKeyId
+				c.SecretAccessKey = *rsp.Credentials.SecretAccessKey
+				c.SessionToken = *rsp.Credentials.SessionToken
+			}
 		} else {
+			core.Info("ℹ️Assuming role with user credentials...")
+
 			if rsp, err := client.AssumeRole(ctx, req); err != nil {
 				return err
 			} else {
@@ -200,9 +295,12 @@ func (c *Config) Authenticate(ctx context.Context) error {
 				c.SessionToken = *rsp.Credentials.SessionToken
 			}
 		}
+
+		core.Info("✅Role assumed")
 	} else if c.SessionToken == "" {
 		core.Debug("role-to-assume=%v", c.RoleToAssume)
 
+		core.Info("ℹ️Requesting session token...")
 		req := sts.GetSessionTokenInput{
 			DurationSeconds: &c.RoleDurationSeconds,
 		}
@@ -212,6 +310,8 @@ func (c *Config) Authenticate(ctx context.Context) error {
 			c.AccessKeyID = *rsp.Credentials.AccessKeyId
 			c.SecretAccessKey = *rsp.Credentials.SecretAccessKey
 			c.SessionToken = *rsp.Credentials.SessionToken
+
+			core.Info("✅Session token refreshed")
 		}
 	}
 
