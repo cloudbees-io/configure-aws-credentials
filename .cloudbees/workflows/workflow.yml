@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - "*"
-
+ 
 jobs:
   compat-check:
     #name: Check the action running on CBA
