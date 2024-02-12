@@ -35,6 +35,8 @@ func init() {
 	viper.SetEnvKeyReplacer(replacer)
 
 	inputString("audience", "sts.amazonaws.com", "The audience to use for the OIDC provider")
+	inputString("cloudbees-api-token", "", "The CloudBees API Token to use for fetching OIDC ID tokens")
+	inputString("cloudbees-api-url", "", "The CloudBees API root URL to use for fetching OIDC ID tokens")
 	inputString("aws-access-key-id", "", "AWS Access Key ID")
 	inputString("aws-secret-access-key", "", "AWS Secret Access Key")
 	inputString("aws-session-token", "", "AWS Session Token")
