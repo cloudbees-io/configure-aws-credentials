@@ -88,6 +88,12 @@ jobs:
       scm-token-own: read
       id-token: write
     steps:
+      - name: Inspect
+        uses: docker://stephenc/jwt-inspector
+        with:
+          entrypoint: /jwt-inspector
+        env:
+          JWT_TOKEN: ${{ cloudbees.api.token }}
       - name: Checkout
         uses: cloudbees-io/checkout@v1
       - name: Compat aws
