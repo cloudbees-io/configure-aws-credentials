@@ -1,6 +1,5 @@
 apiVersion: automation.cloudbees.io/v1alpha1
 kind: workflow
-
 name: SelfTest
 
 on:
@@ -10,35 +9,53 @@ on:
 
 jobs:
   build:
+    if: cloudbees.api.url == 'https://api.saas-preprod.beescloud.com' || cloudbees.api.url == 'https://api.cloudbees.io'
+    permissions:
+      scm-token-own: read
+      id-token: write
     steps:
       - name: Checkout
-        uses: cloudbees-io/checkout@v1
+        uses: https://github.com/cloudbees-io/checkout@v1
+
       - name: Self Test
         uses: docker://golang:1.21.7
         run: |
-          make format sync check-git-status test
-      - id: dockerconfig
-        name: Configure container registry credentials
-        uses: cloudbees-io/configure-oci-credentials@v0
+          make verify
+
+      - name: Login to AWS
+        uses: https://github.com/cloudbees-io/configure-aws-credentials@v1
         with:
-          registry: ${{ vars.STAGING_DOCKER_REGISTRY }}
-          username: ${{ secrets.STAGING_DOCKER_USERNAME }}
-          password: ${{ secrets.STAGING_DOCKER_PASSWORD }}
-      - name: Build and publish
-        uses: cloudbees-io/kaniko
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.oidc_staging_iam_role }}
+          role-duration-seconds: "3600"
+
+      - name: Configure container registry for Staging ECR
+        uses: https://github.com/cloudbees-io/configure-ecr-credentials@v1
+
+      - name: Login to Dockerhub using Cloudbees service account
+        uses: https://github.com/cloudbees-io/configure-oci-credentials@v1
         with:
-          destination: registry.saas-dev.beescloud.com/staging/configure-aws-credentials:${{ cloudbees.scm.sha }}
-          labels: maintainer=sdp-pod-3,email=engineering@cloudbees.com
-  compat-check:
+          registry: docker.io
+          username: ${{ secrets.e5bbc3_dockerhub_user }}
+          password: ${{ secrets.e5bbc3_dockerhub_password }}
+
+      - name: Build image
+        uses: https://github.com/cloudbees-io/kaniko@v1
+        with:
+          destination: 020229604682.dkr.ecr.us-east-1.amazonaws.com/actions/configure-aws-credentials:${{ cloudbees.scm.sha }}
+          labels: maintainer=sdp-pod-3,email=engineering@cloudbees.io
+
+  test-with-keys:
+    #name: Check the action running on CBA using explicit keys
+    if: cloudbees.api.url == 'https://api.saas-preprod.beescloud.com'
     needs:
       - build
-    #name: Check the action running on CBA
     steps:
       - name: Checkout
-        uses: cloudbees-io/checkout@v1
+        uses: https://github.com/cloudbees-io/checkout@v1
       - name: Compat aws
         id: login
-        uses: ./.cloudbees/staging
+        uses: ./.cloudbees/testing
         with:
           aws-region: ${{ vars.cloudbees_saas_test_region }}
           aws-access-key-id: ${{ vars.cloudbees_saas_test_access_key_id }}
@@ -55,33 +72,39 @@ jobs:
         uses: docker://amazon/aws-cli:2.12.6
         run: |
           aws sts get-caller-identity
-  alt-check:
-    #name: Check the action running on CBA
+
+  test-with-chaining:
+    #name: Check authentication chaining
+    if: cloudbees.api.url == 'https://api.saas-preprod.beescloud.com'
     needs:
       - build
-    env:
-      RUNNER_DEBUG: "1"
     steps:
       - name: Checkout
-        uses: cloudbees-io/checkout@v1
+        uses: https://github.com/cloudbees-io/checkout@v1
+
       - name: Setup
-        uses: ./.cloudbees/staging
+        uses: ./.cloudbees/testing
         with:
           aws-region: ${{ vars.cloudbees_saas_test_region }}
           aws-access-key-id: ${{ vars.cloudbees_saas_test_access_key_id }}
           aws-secret-access-key: ${{ secrets.cloudbees_saas_test_secret_access_key }}
+
       - name: Chain
-        uses: cloudbees-io/configure-aws-credentials@v0
+        uses: ./.cloudbees/testing
         with:
           aws-region: ${{ vars.cloudbees_saas_test_region }}
           role-chaining: "true"
           role-to-assume: ${{ vars.cloudbees_saas_test_role_name }}
           role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
+
       - name: Check auth
         uses: docker://amazon/aws-cli:2.12.6
         run: |
           aws sts get-caller-identity
-  oidc-check:
+
+  test-with-oidc:
+    #name: Check the action running on CBA using OIDC
+    if: cloudbees.api.url == 'https://api.saas-preprod.beescloud.com'
     needs:
       - build
     permissions:
@@ -89,20 +112,23 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: cloudbees-io/checkout@v1
+        uses: https://github.com/cloudbees-io/checkout@v1
+
       - name: Compat aws
         id: login
-        uses: ./.cloudbees/staging
+        uses: ./.cloudbees/testing
         with:
           aws-region: ${{ vars.cloudbees_saas_test_region }}
           role-to-assume: ${{ vars.cloudbees_saas_test_role_arn }}
           role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
+
       - name: Check Output
         uses: docker://amazon/aws-cli:2.12.6
         run: |
           echo "AWS Account ID: ${{ steps.login.outputs.aws-account-id }}"
           echo "AWS Config Dir:"
           ls -l $HOME/.aws
+
       - name: Check auth
         uses: docker://amazon/aws-cli:2.12.6
         run: |
