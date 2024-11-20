@@ -4,6 +4,34 @@ Configure Amazon Web Services (AWS) Identity and Access Management (IAM) credent
 This action implements the AWS SDK credential resolution chain and sets configuration and credential files for other CloudBees actions to use.
 Configuration and credential files are detected by both the AWS SDKs and the AWS CLI for AWS API calls.
 
+== Additional information about `aws-session-token`
+
+The `aws-session-token` is used in cases where temporary session credentials are required. AWS recommends using temporary credentials as a best practice to enhance security. Most users will need to provide a session token, as it is typically required for credentials issued through role assumption or federated authentication mechanisms.
+
+If using a long-term IAM user, a session token is not necessary. However, CloudBees recommends using a dedicated AWS IAM user with minimal permissions only when OpenID Connect (OIDC) integration is not possible. For such use cases, an IAM policy similar to the following must be assigned to allow the creation of long-term credentials:
+
+[source,json]
+--
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:UpdateAccessKey",
+        "iam:ListAccessKeys"
+      ],
+      "Resource": "arn:aws:iam::account-id:user/username"
+    }
+  ]
+}
+
+--
+
+NOTE: Replace `account-id` with your AWS account ID and `username` with the name of the IAM user.
+
 == Inputs
 
 [cols="2a,1a,1a,3a",options="header"]
@@ -24,6 +52,11 @@ Configuration and credential files are detected by both the AWS SDKs and the AWS
 | String
 | Yes
 | The AWS secret key.
+
+| `aws-session-token`
+| String
+| No
+| The AWS session token to use. Required for temporary credentials and most common authentication setups.
 
 | `aws-region`
 | String
@@ -189,7 +222,7 @@ Pass multiple managed policies as:
 
 == License
 
-This code is made available under the 
+This code is made available under the
 link:https://opensource.org/license/mit/[MIT license].
 
 == References
