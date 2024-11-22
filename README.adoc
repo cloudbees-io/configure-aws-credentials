@@ -6,7 +6,7 @@ Configuration and credential files are detected by both the AWS SDKs and the AWS
 
 == Additional information about `aws-session-token`
 
-The `aws-session-token` is used in cases where temporary session credentials are required. AWS recommends using temporary credentials as a best practice to enhance security. Most users will need to provide a session token, as it is typically required for credentials issued through role assumption or federated authentication mechanisms.
+The `aws-session-token` is used when temporary session credentials are needed. However, users are encouraged to use OIDC authentication instead, as it simplifies credential management and avoids the need to update session tokens manually. The `aws-session-token` is best suited for complex workflows where OIDC authentication may not be an option, though OIDC is typically the preferred approach.
 
 If using a long-term IAM user, a session token is not necessary. However, CloudBees recommends using a dedicated AWS IAM user with minimal permissions only when OpenID Connect (OIDC) integration is not possible. For such use cases, an IAM policy similar to the following must be assigned to allow the creation of long-term credentials:
 
