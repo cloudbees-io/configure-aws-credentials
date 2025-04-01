@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -278,7 +279,14 @@ func (c *Config) Authenticate(ctx context.Context) error {
 			}
 
 			if rsp, err := client.AssumeRoleWithWebIdentity(ctx, &params); err != nil {
-				return err
+				claims, err2 := extractClaims(*params.WebIdentityToken)
+
+				if err2 == nil {
+					return fmt.Errorf("Could not assume role with web identity: %w\nToken claims:\n%s", err,
+						strings.ReplaceAll(claims, "\n", "\n  "))
+				}
+
+				return fmt.Errorf("Could not assume role with web identity: %w\nToken claims could not be parsed", err)
 			} else {
 				c.AccessKeyID = *rsp.Credentials.AccessKeyId
 				c.SecretAccessKey = *rsp.Credentials.SecretAccessKey
@@ -390,4 +398,35 @@ func (c *Config) exportAccountId(ctx context.Context) error {
 	}
 
 	return os.WriteFile(filepath.Join(os.Getenv("CLOUDBEES_OUTPUTS"), "aws-account-id"), []byte(*rsp.Account), 0666)
+}
+
+// decodeSegment decodes a JWT segment (Base64 URL-encoded)
+func decodeSegment(seg string) ([]byte, error) {
+	// Add padding if necessary
+	if l := len(seg) % 4; l > 0 {
+		seg += strings.Repeat("=", 4-l)
+	}
+	return base64.URLEncoding.DecodeString(seg)
+}
+
+// extractClaims extracts and prints claims from a JWT
+func extractClaims(token string) (string, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid JWT format")
+	}
+
+	payload, err := decodeSegment(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("failed to decode payload: %v", err)
+	}
+
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return "", fmt.Errorf("failed to parse claims: %v", err)
+	}
+
+	claimsJSON, _ := json.MarshalIndent(claims, "", "  ")
+
+	return string(claimsJSON), nil
 }
