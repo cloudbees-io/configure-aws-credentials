@@ -400,15 +400,6 @@ func (c *Config) exportAccountId(ctx context.Context) error {
 	return os.WriteFile(filepath.Join(os.Getenv("CLOUDBEES_OUTPUTS"), "aws-account-id"), []byte(*rsp.Account), 0666)
 }
 
-// decodeSegment decodes a JWT segment (Base64 URL-encoded)
-func decodeSegment(seg string) ([]byte, error) {
-	// Add padding if necessary
-	if l := len(seg) % 4; l > 0 {
-		seg += strings.Repeat("=", 4-l)
-	}
-	return base64.URLEncoding.DecodeString(seg)
-}
-
 // extractClaims extracts and prints claims from a JWT
 func extractClaims(token string) (string, error) {
 	parts := strings.Split(token, ".")
@@ -416,7 +407,7 @@ func extractClaims(token string) (string, error) {
 		return "", fmt.Errorf("invalid JWT format")
 	}
 
-	payload, err := decodeSegment(parts[1])
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return "", fmt.Errorf("failed to decode payload: %v", err)
 	}
