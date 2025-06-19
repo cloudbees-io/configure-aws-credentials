@@ -18,7 +18,7 @@ jobs:
         uses: https://github.com/cloudbees-io/checkout@v1
 
       - name: Self Test
-        uses: docker://golang:1.23.1
+        uses: docker://golang:1.24.4
         run: |
           make verify
 
@@ -56,13 +56,13 @@ jobs:
           role-to-assume: ${{ vars.cloudbees_saas_test_role_name }}
           role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
       - name: Check Output
-        uses: docker://amazon/aws-cli:2.12.6
+        uses: docker://amazon/aws-cli:2.27.38
         run: |
           echo "AWS Account ID: ${{ steps.login.outputs.aws-account-id }}"
           echo "AWS Config Dir:"
           ls -l $HOME/.aws
       - name: Check auth
-        uses: docker://amazon/aws-cli:2.12.6
+        uses: docker://amazon/aws-cli:2.27.38
         run: |
           aws sts get-caller-identity
 
@@ -91,7 +91,7 @@ jobs:
           role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
 
       - name: Check auth
-        uses: docker://amazon/aws-cli:2.12.6
+        uses: docker://amazon/aws-cli:2.27.38
         run: |
           aws sts get-caller-identity
 
@@ -116,13 +116,13 @@ jobs:
           role-duration-seconds: "3600" # need to override default of 6h as our role has 1h max
 
       - name: Check Output
-        uses: docker://amazon/aws-cli:2.12.6
+        uses: docker://amazon/aws-cli:2.27.38
         run: |
           echo "AWS Account ID: ${{ steps.login.outputs.aws-account-id }}"
           echo "AWS Config Dir:"
           ls -l $HOME/.aws
 
       - name: Check auth
-        uses: docker://amazon/aws-cli:2.12.6
+        uses: docker://amazon/aws-cli:2.27.38
         run: |
           aws sts get-caller-identity
