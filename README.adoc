@@ -1,7 +1,7 @@
 = CloudBees action: Configure AWS credentials
 
 Configure Amazon Web Services (AWS) Identity and Access Management (IAM) credentials, credential files, and a region for use in CloudBees workflows.
-This action implements the AWS SDK credential resolution chain and sets configuration and credential files for other CloudBees actions to use.
+This action implements the AWS SDK credential resolution chain and sets configuration and credential files for other CloudBees actions to use..
 Configuration and credential files are detected by both the AWS SDKs and the AWS CLI for AWS API calls.
 
 == Additional information about `aws-session-token`
