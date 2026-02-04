@@ -33,10 +33,19 @@ jobs:
         uses: https://github.com/cloudbees-io/configure-ecr-credentials@v1
 
       - name: Build image
+        id: build-image
         uses: https://github.com/cloudbees-io/kaniko@v1
         with:
           destination: 020229604682.dkr.ecr.us-east-1.amazonaws.com/actions/configure-aws-credentials:${{ cloudbees.scm.sha }},020229604682.dkr.ecr.us-east-1.amazonaws.com/actions/configure-aws-credentials:latest
           labels: maintainer=sdp-pod-3,email=engineering@cloudbees.io
+      - id: slsa-attestation
+        name: Generate SLSA attestation
+        uses: https://github.com/calculi-corp/slsa-attestation@v1
+        with:
+          image-digest: 020229604682.dkr.ecr.us-east-1.amazonaws.com/actions/configure-aws-credentials@${{ steps.build-image.outputs.digest }}
+          aws-role-to-assume: ${{ vars.oidc_staging_iam_role }}
+          aws-region: us-east-1
+          aws-kms-alias: cbp-dev-kms-key-cosign
 
   test-with-keys:
     #name: Check the action running on CBA using explicit keys
