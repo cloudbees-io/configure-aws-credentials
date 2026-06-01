@@ -3,10 +3,15 @@ kind: workflow
 name: SelfTest
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   push:
     branches:
       - "**"
+
+permissions:
+  scm-token-own: read
+  scm-token-org: read
+  id-token: write
 
 jobs:
   build:
@@ -26,7 +31,7 @@ jobs:
 
       - id: build-image
         name: Build, scan and push to ECR
-        uses: calculi-corp/cb-internal-shared-actions/build@v8
+        uses: calculi-corp/cb-internal-shared-actions/build/action@v8
         with:
           go-binary-build: "true"
           go-binary-name: configure-aws-credentials
