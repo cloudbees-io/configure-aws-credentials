@@ -85,7 +85,7 @@ runs:
   steps:
     - name: Configure AWS Credentials For CloudBees Automations
       id: auth
-      uses: docker://public.ecr.aws/l7o7z1g8/actions/configure-aws-credentials:${{ action.scm.sha }}
+      uses: docker://public.ecr.aws/l7o7z1g8/actions/configure-aws-credentials:8db4d7c7a710a02e1b7d92cdc766d30cd6b37a3b action.scm.sha }}
       env:
         INPUT_AUDIENCE: ${{ inputs.audience }}
         INPUT_CLOUDBEES_API_TOKEN: ${{ inputs.cloudbees-api-token }}
